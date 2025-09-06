@@ -28,10 +28,7 @@ impl Escena {
         // Renderizar luz
         light.render(d3);
         
-        // Renderizar cubo base sólido
-        self.cubo.render_solid_base(d3);
-        
-        // Renderizar caras iluminadas
+        // Solo renderizar caras iluminadas (ahora incluye todas con diferentes niveles de luz)
         self.cubo.render_lit_faces(d3, light, cam, show_normals);
         
         // Renderizar sombras (mejorado para evitar parpadeo)

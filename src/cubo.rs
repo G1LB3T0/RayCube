@@ -49,11 +49,11 @@ impl Cubo {
     }
 
     pub fn render_solid_base(&self, d3: &mut RaylibMode3D<RaylibTextureMode<RaylibDrawHandle>>) {
-        // Cubo base más oscuro para que la iluminación destaque más
+        // Cubo base extremadamente oscuro para contraste máximo
         let cube_color = Color::new(
-            (colores::OBJECT_COLOR[0] * 120.0) as u8, // Más oscuro que antes
-            (colores::OBJECT_COLOR[1] * 120.0) as u8,
-            (colores::OBJECT_COLOR[2] * 120.0) as u8,
+            (colores::OBJECT_COLOR[0] * 15.0) as u8, // Extremadamente oscuro
+            (colores::OBJECT_COLOR[1] * 15.0) as u8,
+            (colores::OBJECT_COLOR[2] * 15.0) as u8,
             255
         );
         d3.draw_cube(Vector3::new(0.0, self.position_offset, 0.0), self.size * 2.0, self.size * 2.0, self.size * 2.0, cube_color);
@@ -61,14 +61,6 @@ impl Cubo {
 
     pub fn render_lit_faces(&self, d3: &mut RaylibMode3D<RaylibTextureMode<RaylibDrawHandle>>, 
                            light: &light::Light, cam: &Camera3D, show_normals: bool) {
-        // Color base más oscuro para mejor contraste
-        let base_color = Color::new(
-            (colores::OBJECT_COLOR[0] * 180.0) as u8, // Reducido de 255 a 180
-            (colores::OBJECT_COLOR[1] * 180.0) as u8,
-            (colores::OBJECT_COLOR[2] * 180.0) as u8,
-            255,
-        );
-
         // Crear lista de triángulos para shadow testing
         let mut all_triangles = Vec::new();
         for (tri1, tri2, _) in self.faces.iter() {
@@ -76,7 +68,11 @@ impl Cubo {
             all_triangles.push((self.verts[tri2[0]], self.verts[tri2[1]], self.verts[tri2[2]]));
         }
 
-        unsafe { raylib::ffi::rlDisableBackfaceCulling(); }
+        // Desactivar backface culling completamente para este renderizado
+        unsafe { 
+            raylib::ffi::rlDisableBackfaceCulling();
+            raylib::ffi::rlDisableDepthTest(); // También desactivar depth test temporalmente
+        }
         
         for (tri1, tri2, normal_hint) in self.faces.iter() {
             let normal = *normal_hint;
@@ -85,22 +81,17 @@ impl Cubo {
             let (a, b, c) = (self.verts[tri1[0]], self.verts[tri1[1]], self.verts[tri1[2]]);
             let center1 = (a + b + c) / 3.0;
             
-            let view_dir = (cam.position - center1).normalized();
-            if normal.dot(view_dir) > -0.5 {
-                // Usar iluminación realista con reflexión especular
-                let color1 = calculate_realistic_lighting(normal, center1, light, base_color, cam.position);
-                d3.draw_triangle3D(a, b, c, color1);
-            }
+            // Dibujar SIEMPRE, sin importar la orientación
+            let color1 = calculate_realistic_lighting(normal, center1, light, cam.position);
+            d3.draw_triangle3D(a, b, c, color1);
 
             // Segundo triángulo
             let (a2, b2, c2) = (self.verts[tri2[0]], self.verts[tri2[1]], self.verts[tri2[2]]);
             let center2 = (a2 + b2 + c2) / 3.0;
             
-            let view_dir2 = (cam.position - center2).normalized();
-            if normal.dot(view_dir2) > -0.5 {
-                let color2 = calculate_realistic_lighting(normal, center2, light, base_color, cam.position);
-                d3.draw_triangle3D(a2, b2, c2, color2);
-            }
+            // Dibujar SIEMPRE, sin importar la orientación
+            let color2 = calculate_realistic_lighting(normal, center2, light, cam.position);
+            d3.draw_triangle3D(a2, b2, c2, color2);
 
             if show_normals {
                 let ctri = (a + b + c) / 3.0;
@@ -110,7 +101,11 @@ impl Cubo {
             }
         }
         
-        unsafe { raylib::ffi::rlEnableBackfaceCulling(); }
+        // Reactivar el depth test pero NO el backface culling
+        unsafe { 
+            raylib::ffi::rlEnableDepthTest();
+            // Mantener backface culling desactivado: raylib::ffi::rlEnableBackfaceCulling();
+        }
     }
 
     pub fn render_wireframe(&self, d3: &mut RaylibMode3D<RaylibTextureMode<RaylibDrawHandle>>, cam: &Camera3D) {
@@ -190,35 +185,46 @@ impl Cubo {
     }
 }
 
-// Función de iluminación realista con reflexión especular
-fn calculate_realistic_lighting(normal: Vector3, point: Vector3, light: &light::Light, base_color: Color, camera_pos: Vector3) -> Color {
+// Función de iluminación extrema para contraste máximo con color rojo fijo
+fn calculate_realistic_lighting(normal: Vector3, point: Vector3, light: &light::Light, camera_pos: Vector3) -> Color {
     let light_pos = light.position_vec3();
     let light_dir = (light_pos - point).normalized();
     let n = normal.normalized();
     let view_dir = (camera_pos - point).normalized();
     
-    // Calcular distancia para atenuación más suave
+    // Calcular distancia para atenuación
     let distance = (light_pos - point).length();
-    let attenuation = 1.0 / (1.0 + 0.05 * distance); // Atenuación más suave
+    let attenuation = 1.0 / (1.0 + 0.05 * distance);
     
-    // Iluminación difusa con rango más controlado
-    let diffuse_intensity = (n.dot(light_dir).max(0.0) * attenuation * 0.6).min(1.0);
+    // Iluminación difusa con contraste extremo
+    let dot_product = n.dot(light_dir);
     
-    // Iluminación especular más sutil
-    let reflect_dir = reflect_vector(light_dir * -1.0, n);
-    let spec_intensity = (view_dir.dot(reflect_dir).max(0.0).powf(8.0) * attenuation * 0.3).min(1.0);
+    // Para evitar que las caras desaparezcan, usar el valor absoluto del dot product
+    // Esto hace que ambos lados de la cara reciban algo de iluminación
+    let diffuse_raw = dot_product.abs().max(0.1); // Mínimo 0.1 para visibilidad
     
-    // Luz ambiente más alta para evitar áreas muy oscuras
-    let ambient = 0.4;
+    // Sin luz ambiente prácticamente, solo luz directa
+    let diffuse_intensity = (diffuse_raw * diffuse_raw * attenuation * colores::DIFFUSE_STRENGTH).min(3.0);
     
-    // Combinar iluminación con rangos más equilibrados
-    let final_diffuse = ambient + diffuse_intensity * 0.5; // Reducir contraste difuso
-    let final_specular = spec_intensity * 0.4; // Reducir brillo especular
+    // Iluminación especular muy brillante
+    let reflect_dir = reflect_vector(-light_dir, n);
+    let spec_factor = view_dir.dot(reflect_dir).max(0.0);
+    let spec_intensity = (spec_factor.powf(32.0) * attenuation * colores::SPECULAR_STRENGTH).min(1.0);
     
-    // Aplicar al color base manteniendo el color original
-    let r = ((base_color.r as f32 * final_diffuse) + (120.0 * final_specular)).clamp(0.0, 255.0) as u8;
-    let g = ((base_color.g as f32 * final_diffuse) + (120.0 * final_specular)).clamp(0.0, 255.0) as u8;
-    let b = ((base_color.b as f32 * final_diffuse) + (120.0 * final_specular)).clamp(0.0, 255.0) as u8;
+    // Luz ambiente prácticamente nula pero con mínimo para visibilidad
+    let ambient = colores::AMBIENT_LIGHT.max(0.05); // Mínimo 0.05 para que siempre sea visible
+    
+    // Definir color rojo base fijo
+    let red_base = Color::new(255, 0, 0, 255); // Rojo puro
+    
+    // Combinar componentes manteniendo el color rojo
+    let final_intensity = ambient + diffuse_intensity;
+    let final_specular = spec_intensity;
+    
+    // Aplicar iluminación solo al canal rojo, mantener verde y azul en 0
+    let r = ((red_base.r as f32 * final_intensity * 0.5) + (255.0 * final_specular)).clamp(0.0, 255.0) as u8;
+    let g = (final_specular * 50.0).clamp(0.0, 255.0) as u8; // Pequeña cantidad de verde en reflejos
+    let b = (final_specular * 50.0).clamp(0.0, 255.0) as u8; // Pequeña cantidad de azul en reflejos
     
     Color::new(r, g, b, 255)
 }

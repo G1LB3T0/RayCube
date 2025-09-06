@@ -30,7 +30,7 @@ pub fn color_vec(l: &Light) -> Vector3 {
 	Vector3::new(l.color[0], l.color[1], l.color[2])
 }
 
-// Ray-traced shading con sombras reales y mejor contraste
+// Ray-traced shading con sombras mejoradas y mejor contraste
 pub fn shade_with_shadows(
 	normal: Vector3, 
 	point: Vector3,
@@ -53,12 +53,11 @@ pub fn shade_with_shadows(
 		1.0 
 	};
 	
-	// Calcular difuso con contraste muy visible
-	let diffuse = ndotl * ndotl * shadow_factor; // Cuadrático para buen contraste
+	// Calcular difuso con mejor contraste - usar función cuadrática para más drama
+	let diffuse = (ndotl * ndotl * shadow_factor * crate::colores::DIFFUSE_STRENGTH).min(1.0);
 	
-	// Aplicar iluminación más directa y visible
-	let light_contribution = diffuse * 2.0; // Factor x2 para mayor visibilidad
-	let final_intensity = ambient + light_contribution;
+	// Usar la luz ambiente baja de las constantes
+	let final_intensity = crate::colores::AMBIENT_LIGHT + diffuse;
 	
 	Color::new(
 		(base.r as f32 * final_intensity * light_col.x).clamp(0.0, 255.0) as u8,
