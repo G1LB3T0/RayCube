@@ -1,0 +1,38 @@
+# Rust/Cargo
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# VS Code
+.vscode/
+
+# Windows
+*.exe
+*.pdb
+*.dll
+*.log
+
+# Misc
+*.swp
+*.swo
+*.bak
+.DS_Store
+Thumbs.db
+
+# Raylib generated files
+*.bmp
+*.png
+*.jpg
+*.obj
+*.mtl
+
+# Node/npm (if used)
+node_modules/
+
+# Python (if used)
+__pycache__/
+*.pyc
+
+# Others
+.idea/
+*.iml
