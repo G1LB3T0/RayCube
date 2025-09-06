@@ -66,6 +66,7 @@ pub struct LightControls {
     pub auto_rotate: bool,
     pub radius: f32,
     pub height: f32,
+    pub intensity: f32, // Nueva propiedad para controlar intensidad
 }
 
 impl LightControls {
@@ -75,12 +76,21 @@ impl LightControls {
             auto_rotate: true,
             radius: 5.0,
             height: 4.0,
+            intensity: 1.0, // Intensidad por defecto
         }
     }
 
     pub fn update(&mut self, rl: &RaylibHandle) {
         if rl.is_key_pressed(KeyboardKey::KEY_L) { 
             self.auto_rotate = !self.auto_rotate; 
+        }
+
+        // Controles para intensidad de luz
+        if rl.is_key_down(KeyboardKey::KEY_KP_ADD) || rl.is_key_down(KeyboardKey::KEY_EQUAL) {
+            self.intensity = (self.intensity + 0.02).min(3.0);
+        }
+        if rl.is_key_down(KeyboardKey::KEY_KP_SUBTRACT) || rl.is_key_down(KeyboardKey::KEY_MINUS) {
+            self.intensity = (self.intensity - 0.02).max(0.1);
         }
 
         if self.auto_rotate {
@@ -94,5 +104,7 @@ impl LightControls {
             self.height,
             self.radius * self.rotation.sin(),
         ];
+        // Actualizar intensidad de la luz
+        light.color = [self.intensity, self.intensity, self.intensity];
     }
 }

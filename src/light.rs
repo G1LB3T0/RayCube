@@ -48,19 +48,22 @@ pub fn shade_with_shadows(
 	// Ray tracing para sombras con mayor intensidad
 	let in_shadow = crate::intersecto_ray::is_in_shadow(point, light_pos, shadow_triangles);
 	let shadow_factor = if in_shadow { 
-		crate::colores::SHADOW_INTENSITY // Sombras mucho más oscuras
+		crate::colores::SHADOW_INTENSITY 
 	} else { 
 		1.0 
 	};
 	
-	// Calcular difuso con más contraste
-	let diffuse = (ndotl * ndotl) * shadow_factor; // Cuadrático para más contraste
-	let shade = ambient + diffuse * (1.0 - ambient);
+	// Calcular difuso con contraste muy visible
+	let diffuse = ndotl * ndotl * shadow_factor; // Cuadrático para buen contraste
+	
+	// Aplicar iluminación más directa y visible
+	let light_contribution = diffuse * 2.0; // Factor x2 para mayor visibilidad
+	let final_intensity = ambient + light_contribution;
 	
 	Color::new(
-		(base.r as f32 * shade * light_col.x).clamp(0.0, 255.0) as u8,
-		(base.g as f32 * shade * light_col.y).clamp(0.0, 255.0) as u8,
-		(base.b as f32 * shade * light_col.z).clamp(0.0, 255.0) as u8,
+		(base.r as f32 * final_intensity * light_col.x).clamp(0.0, 255.0) as u8,
+		(base.g as f32 * final_intensity * light_col.y).clamp(0.0, 255.0) as u8,
+		(base.b as f32 * final_intensity * light_col.z).clamp(0.0, 255.0) as u8,
 		255,
 	)
 }

@@ -11,14 +11,15 @@ pub fn render_ui(d: &mut RaylibDrawHandle, camera_controls: &CameraControls, lig
     d.draw_text("Rueda: Zoom", 10, 125, 16, Color::LIGHTGRAY);
     d.draw_text("N: Mostrar normales", 10, 145, 16, Color::LIGHTGRAY);
     d.draw_text("B: Alternar bordes", 10, 165, 16, Color::LIGHTGRAY);
-    d.draw_text("L: Pausar/reanudar rotación luz", 10, 185, 16, Color::LIGHTGRAY);
+    d.draw_text("+/-: Intensidad luz", 10, 185, 16, Color::LIGHTGRAY);
+    d.draw_text("L: Pausar/reanudar rotación luz", 10, 205, 16, Color::LIGHTGRAY);
     
     // Información de posición
-    d.draw_text(&format!("Radius: {:.2}", camera_controls.radius), 10, 205, 16, Color::YELLOW);
-    d.draw_text(&format!("Yaw: {:.2}°", camera_controls.yaw.to_degrees()), 10, 225, 16, Color::YELLOW);
-    d.draw_text(&format!("Pitch: {:.2}°", camera_controls.pitch.to_degrees()), 10, 245, 16, Color::YELLOW);
+    d.draw_text(&format!("Radius: {:.2}", camera_controls.radius), 10, 225, 16, Color::YELLOW);
+    d.draw_text(&format!("Yaw: {:.2}°", camera_controls.yaw.to_degrees()), 10, 245, 16, Color::YELLOW);
+    d.draw_text(&format!("Pitch: {:.2}°", camera_controls.pitch.to_degrees()), 10, 265, 16, Color::YELLOW);
     
     // Estado de la luz
     let light_status = if light_controls.auto_rotate { "Rotando" } else { "Estática" };
-    d.draw_text(&format!("Luz: {}", light_status), 10, 265, 16, Color::CYAN);
+    d.draw_text(&format!("Luz: {} (Int: {:.1})", light_status, light_controls.intensity), 10, 285, 16, Color::CYAN);
 }

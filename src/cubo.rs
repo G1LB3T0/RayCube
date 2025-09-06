@@ -68,7 +68,6 @@ impl Cubo {
             (colores::OBJECT_COLOR[2] * 180.0) as u8,
             255,
         );
-        let light_col = light::color_vec(light);
 
         // Crear lista de triángulos para shadow testing
         let mut all_triangles = Vec::new();
@@ -88,8 +87,8 @@ impl Cubo {
             
             let view_dir = (cam.position - center1).normalized();
             if normal.dot(view_dir) > -0.5 {
-                // Usar iluminación con menos luz ambiente y más contraste
-                let color1 = light::shade_with_shadows(normal, center1, light, base_color, light_col, colores::AMBIENT_LIGHT, &all_triangles);
+                // Usar iluminación realista con reflexión especular
+                let color1 = calculate_realistic_lighting(normal, center1, light, base_color, cam.position);
                 d3.draw_triangle3D(a, b, c, color1);
             }
 
@@ -99,7 +98,7 @@ impl Cubo {
             
             let view_dir2 = (cam.position - center2).normalized();
             if normal.dot(view_dir2) > -0.5 {
-                let color2 = light::shade_with_shadows(normal, center2, light, base_color, light_col, colores::AMBIENT_LIGHT, &all_triangles);
+                let color2 = calculate_realistic_lighting(normal, center2, light, base_color, cam.position);
                 d3.draw_triangle3D(a2, b2, c2, color2);
             }
 
@@ -189,4 +188,42 @@ impl Cubo {
             }
         }
     }
+}
+
+// Función de iluminación realista con reflexión especular
+fn calculate_realistic_lighting(normal: Vector3, point: Vector3, light: &light::Light, base_color: Color, camera_pos: Vector3) -> Color {
+    let light_pos = light.position_vec3();
+    let light_dir = (light_pos - point).normalized();
+    let n = normal.normalized();
+    let view_dir = (camera_pos - point).normalized();
+    
+    // Calcular distancia para atenuación más suave
+    let distance = (light_pos - point).length();
+    let attenuation = 1.0 / (1.0 + 0.05 * distance); // Atenuación más suave
+    
+    // Iluminación difusa con rango más controlado
+    let diffuse_intensity = (n.dot(light_dir).max(0.0) * attenuation * 0.6).min(1.0);
+    
+    // Iluminación especular más sutil
+    let reflect_dir = reflect_vector(light_dir * -1.0, n);
+    let spec_intensity = (view_dir.dot(reflect_dir).max(0.0).powf(8.0) * attenuation * 0.3).min(1.0);
+    
+    // Luz ambiente más alta para evitar áreas muy oscuras
+    let ambient = 0.4;
+    
+    // Combinar iluminación con rangos más equilibrados
+    let final_diffuse = ambient + diffuse_intensity * 0.5; // Reducir contraste difuso
+    let final_specular = spec_intensity * 0.4; // Reducir brillo especular
+    
+    // Aplicar al color base manteniendo el color original
+    let r = ((base_color.r as f32 * final_diffuse) + (120.0 * final_specular)).clamp(0.0, 255.0) as u8;
+    let g = ((base_color.g as f32 * final_diffuse) + (120.0 * final_specular)).clamp(0.0, 255.0) as u8;
+    let b = ((base_color.b as f32 * final_diffuse) + (120.0 * final_specular)).clamp(0.0, 255.0) as u8;
+    
+    Color::new(r, g, b, 255)
+}
+
+// Función auxiliar para calcular reflexión
+fn reflect_vector(incident: Vector3, normal: Vector3) -> Vector3 {
+    incident - normal * (2.0 * incident.dot(normal))
 }
