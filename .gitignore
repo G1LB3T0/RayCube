@@ -21,10 +21,13 @@ Thumbs.db
 
 # Raylib generated files
 *.bmp
-*.png
+# *.png  # Comentado para permitir textura en assets
 *.jpg
 *.obj
 *.mtl
+
+# Permitir archivos PNG en assets
+!assets/*.png
 
 # Node/npm (if used)
 node_modules/
