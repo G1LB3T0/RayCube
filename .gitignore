@@ -19,9 +19,9 @@ Cargo.lock
 .DS_Store
 Thumbs.db
 
-# Raylib generated files
+# Archivos generados por Raylib
 *.bmp
-# *.png  # Comentado para permitir textura en assets
+# *.png  # Comentado para permitir texturas en assets
 *.jpg
 *.obj
 *.mtl
