@@ -24,8 +24,11 @@ fn main() {
 
     rl.set_target_fps(60);
 
-    // Inicialización de la escena
-    let escena = Escena::new();
+    // Cargar textura para el cubo
+    let texture = rl.load_texture(&thread, "assets/texture1.png").expect("No se pudo cargar la textura");
+
+    // Inicialización de la escena con textura
+    let escena = Escena::new_with_texture(texture);
     
     // Configuración de cámara
     let mut cam = camera::make_camera();
@@ -45,6 +48,7 @@ fn main() {
     // Estado de visualización
     let mut show_normals = false;
     let mut show_wireframe = true; // Nuevo control para mostrar/ocultar bordes
+    let mut show_ui = false; // Control para mostrar/ocultar el menú UI
 
     // Loop principal
     while !rl.window_should_close() {
@@ -54,6 +58,9 @@ fn main() {
         }
         if rl.is_key_pressed(KeyboardKey::KEY_B) { 
             show_wireframe = !show_wireframe; 
+        }
+        if rl.is_key_pressed(KeyboardKey::KEY_U) { 
+            show_ui = !show_ui; // Presiona 'U' para mostrar/ocultar el menú
         }
         
         // Actualizar controles
@@ -73,8 +80,8 @@ fn main() {
         dfb.clear_background(escena.background_color);
         let mut d3 = dfb.begin_mode3D(cam);
 
-        // Renderizar escena
-        escena.render(&mut d3, &light, &cam, show_normals, show_wireframe);
+    // Renderizar escena con textura
+    escena.render(&mut d3, &light, &cam, show_normals, show_wireframe);
         
         drop(d3);
         drop(dfb);
@@ -82,7 +89,9 @@ fn main() {
         // Mostrar framebuffer en pantalla
         framebuffer::blit_to_screen(&mut d, &fb);
         
-        // Renderizar UI
-        ui::render_ui(&mut d, &camera_controls, &light_controls);
+        // Renderizar UI solo si está habilitado
+        if show_ui {
+            ui::render_ui(&mut d, &camera_controls, &light_controls);
+        }
     }
 }

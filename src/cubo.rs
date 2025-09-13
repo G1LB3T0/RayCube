@@ -183,6 +183,78 @@ impl Cubo {
             }
         }
     }
+
+    // Renderizar cubo con textura e iluminación
+    pub fn render_textured(&self, d3: &mut RaylibMode3D<RaylibTextureMode<RaylibDrawHandle>>, texture: &Texture2D, light: &light::Light, camera_pos: Vector3) {
+        // Dibujar cada cara del cubo manualmente con la textura y iluminación realista
+        unsafe {
+            raylib::ffi::rlPushMatrix();
+            raylib::ffi::rlTranslatef(0.0, self.position_offset, 0.0);
+            raylib::ffi::rlSetTexture(texture.id);
+            
+            let s = self.size;
+            
+            // Iterar sobre cada cara y aplicar iluminación
+            let faces_data = [
+                // Cara frontal (z+)
+                (Vector3::new(0.0, 0.0, 1.0), [
+                    (-s, -s, s, 0.0, 0.0), (s, -s, s, 1.0, 0.0), (s, s, s, 1.0, 1.0), (-s, s, s, 0.0, 1.0)
+                ]),
+                // Cara trasera (z-)
+                (Vector3::new(0.0, 0.0, -1.0), [
+                    (-s, -s, -s, 1.0, 0.0), (-s, s, -s, 1.0, 1.0), (s, s, -s, 0.0, 1.0), (s, -s, -s, 0.0, 0.0)
+                ]),
+                // Cara derecha (x+)
+                (Vector3::new(1.0, 0.0, 0.0), [
+                    (s, -s, -s, 1.0, 0.0), (s, s, -s, 1.0, 1.0), (s, s, s, 0.0, 1.0), (s, -s, s, 0.0, 0.0)
+                ]),
+                // Cara izquierda (x-)
+                (Vector3::new(-1.0, 0.0, 0.0), [
+                    (-s, -s, -s, 0.0, 0.0), (-s, -s, s, 1.0, 0.0), (-s, s, s, 1.0, 1.0), (-s, s, -s, 0.0, 1.0)
+                ]),
+                // Cara superior (y+)
+                (Vector3::new(0.0, 1.0, 0.0), [
+                    (-s, s, -s, 0.0, 1.0), (-s, s, s, 0.0, 0.0), (s, s, s, 1.0, 0.0), (s, s, -s, 1.0, 1.0)
+                ]),
+                // Cara inferior (y-)
+                (Vector3::new(0.0, -1.0, 0.0), [
+                    (-s, -s, -s, 1.0, 1.0), (s, -s, -s, 0.0, 1.0), (s, -s, s, 0.0, 0.0), (-s, -s, s, 1.0, 0.0)
+                ])
+            ];
+            
+            for (normal, vertices) in faces_data.iter() {
+                // Calcular el centro de la cara para la iluminación
+                let face_center = Vector3::new(0.0, self.position_offset, 0.0) + *normal * s;
+                
+                // Calcular iluminación para esta cara
+                let lighting_color = calculate_realistic_lighting(*normal, face_center, light, camera_pos);
+                
+                // Aplicar color de iluminación pero mantener la textura
+                // Mezclar el color de iluminación con blanco para modular la textura
+                let light_factor = lighting_color.r as f32 / 255.0; // Usar canal rojo como intensidad
+                let final_color = Color::new(
+                    (255.0 * light_factor).clamp(50.0, 255.0) as u8,  // Mínimo 50 para que la textura sea visible
+                    (255.0 * light_factor).clamp(50.0, 255.0) as u8,
+                    (255.0 * light_factor).clamp(50.0, 255.0) as u8,
+                    255
+                );
+                
+                raylib::ffi::rlColor4ub(final_color.r, final_color.g, final_color.b, final_color.a);
+                raylib::ffi::rlNormal3f(normal.x, normal.y, normal.z);
+                
+                // Dibujar la cara como un quad
+                raylib::ffi::rlBegin(raylib::ffi::RL_QUADS as i32);
+                for (x, y, z, u, v) in vertices.iter() {
+                    raylib::ffi::rlTexCoord2f(*u, *v);
+                    raylib::ffi::rlVertex3f(*x, *y, *z);
+                }
+                raylib::ffi::rlEnd();
+            }
+            
+            raylib::ffi::rlSetTexture(0);
+            raylib::ffi::rlPopMatrix();
+        }
+    }
 }
 
 // Función de iluminación extrema para contraste máximo con color rojo fijo
